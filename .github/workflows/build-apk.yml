@@ -1,0 +1,73 @@
+name: Build Odin 3 APK
+
+# Odin 3 fork of FableDroid. The recompiled game library (libmain.so) needs the game's
+# default.xex to build, which is never stored here, so this workflow takes the native
+# libraries from upstream's published FableDroid release APK (pinned by SHA-256) and builds
+# only the launcher and assets from this repository around them: same game code, this
+# fork's launcher, driver choice and diagnostics.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  UPSTREAM_APK_URL: https://github.com/hardsilinder/FableDroid/releases/download/v0.6.3-beta/FableDroid-0.6.3-beta.apk
+  UPSTREAM_APK_SHA256: 2f1053899bd1b3e2601d62c751751b0ed8b8032e903260ee77f2f51d9aec910a
+  TURNIP_GEN8_URL: https://github.com/StevenMXZ/Adreno-Tools-Drivers/releases/download/v39/Turnip_Gen8_V39_Patched.zip
+  TURNIP_GEN8_SHA256: bd457b30f195cf93a334b5302c221b1b5cb59c79c485935decf95d560a38c8a2
+
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - name: Native libraries from the upstream release APK
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 -o upstream.apk "$UPSTREAM_APK_URL"
+          echo "$UPSTREAM_APK_SHA256  upstream.apk" | sha256sum -c
+          rm -rf upstream && mkdir upstream && unzip -q upstream.apk 'lib/arm64-v8a/*' -d upstream
+          mkdir -p android/app/src/main/jniLibs/arm64-v8a
+          cp upstream/lib/arm64-v8a/*.so android/app/src/main/jniLibs/arm64-v8a/
+          ls -la android/app/src/main/jniLibs/arm64-v8a
+      - name: Bundled Turnip Gen8 V39 patched (Adreno 8xx)
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 -o gen8.zip "$TURNIP_GEN8_URL"
+          echo "$TURNIP_GEN8_SHA256  gen8.zip" | sha256sum -c
+          dest=android/app/src/main/assets/gpu_drivers/turnipgen8
+          rm -rf "$dest" && mkdir -p "$dest"
+          unzip -q gen8.zip meta.json libvulkan_freedreno.so -d "$dest"
+          cp android/app/src/main/assets/gpu_drivers/turnip27/MESA_LICENSE.txt "$dest/"
+          grep -q '"libraryName": "libvulkan_freedreno.so"' "$dest/meta.json"
+          ls -la "$dest"
+      - name: Signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.ODIN3_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ODIN3_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KEYSTORE_B64:-}" ]; then
+            echo "::error::Secrets ODIN3_KEYSTORE_B64 and ODIN3_KEYSTORE_PASSWORD are missing"; exit 1
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/odin3.jks"
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=odin3\nkeyPassword=%s\n' \
+            "$RUNNER_TEMP/odin3.jks" "$KEYSTORE_PASSWORD" "$KEYSTORE_PASSWORD" > android/keystore.properties
+      - name: Build and test
+        working-directory: android
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew --no-daemon testReleaseUnitTest assembleRelease
+          ls -la app/build/outputs/apk/release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FableDroid-odin3-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
