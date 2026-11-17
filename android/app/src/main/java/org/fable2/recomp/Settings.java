@@ -18,6 +18,10 @@ final class Settings {
     // Bundled Turnip driver: assets/gpu_drivers/<BUNDLED_DRIVER>, installed to
     // <internal storage>/gpu_drivers/<BUNDLED_DRIVER>, where the runtime loads it.
     static final String BUNDLED_DRIVER = "turnip27";
+    // Odin 3 fork: second bundled driver for Adreno 8xx (Turnip Gen8 V39 patched).
+    static final String[] BUNDLED_DRIVERS = { BUNDLED_DRIVER, DriverPolicy.BUNDLED_GEN8 };
+    // Turnip debug options for testing Adreno 8xx rendering problems (TU_DEBUG values).
+    static final String[] TURNIP_DEBUG = { "", "sysmem", "nolrz", "noubwc", "sysmem,nolrz,noubwc" };
 
     // Tuned defaults for Adreno 7xx (see docs/ANDROID_PERFORMANCE.md). The launcher
     // writes these on every launch; settings below override some of them.
@@ -45,7 +49,7 @@ final class Settings {
         {"present_render_pass_clear", "false"},
     };
     // Development-only keys removed from the config if a test build left them.
-    private static final String[] REMOVED = { "capture_swap_timing_frames", "vulkan_android_driver_env" };
+    private static final String[] REMOVED = { "capture_swap_timing_frames" };
 
     static final int TOUCH_AUTO = 0, TOUCH_ALWAYS = 1, TOUCH_OFF = 2;
 
@@ -66,6 +70,11 @@ final class Settings {
     }
     void setDriver(String id) { prefs.edit().putString("gpu_driver", id).apply(); }
     boolean logFps() { return prefs.getBoolean("log_fps", false); }
+    boolean logGpuDiagnostics() { return prefs.getBoolean("log_gpu_diagnostics", false); }
+    int turnipDebug() {
+        int i = prefs.getInt("turnip_debug", 0);
+        return i >= 0 && i < TURNIP_DEBUG.length ? i : 0;
+    }
     int touchMode() { return prefs.getInt("touch_mode", TOUCH_AUTO); }
     float touchOpacity() { return prefs.getFloat("touch_opacity", 0.6f); }
     float touchScale() { return prefs.getFloat("touch_scale", 1f); }
@@ -115,6 +124,9 @@ final class Settings {
         managed.put("spirv_alpha_to_coverage_1x_bayer", fineFoliage() ? "true" : "false");
         managed.put("vulkan_android_custom_driver", "\"" + driver() + "\"");
         managed.put("log_guest_fps_seconds", logFps() ? "5" : "0");
+        if (logGpuDiagnostics()) managed.put("log_gpu_diagnostics", "true");
+        String tuDebug = TURNIP_DEBUG[turnipDebug()];
+        managed.put("vulkan_android_driver_env", "\"" + (tuDebug.isEmpty() ? "" : "TU_DEBUG=" + tuDebug) + "\"");
 
         File config = new File(storage, "fable_2.toml");
         List<String> lines = new ArrayList<>();
@@ -155,8 +167,12 @@ final class Settings {
 
     /** Copies the bundled GPU driver to internal storage when missing or outdated. */
     static void installBundledDriver(Context context) throws IOException {
+        for (String id : BUNDLED_DRIVERS) installBundledDriver(context, id);
+    }
+
+    private static void installBundledDriver(Context context, String id) throws IOException {
         AssetManager assets = context.getAssets();
-        String source = "gpu_drivers/" + BUNDLED_DRIVER;
+        String source = "gpu_drivers/" + id;
         String[] files = assets.list(source);
         if (files == null || files.length == 0) return;
         File dir = new File(context.getFilesDir(), source);

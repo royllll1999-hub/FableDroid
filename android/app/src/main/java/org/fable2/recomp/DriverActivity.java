@@ -21,7 +21,8 @@ public final class DriverActivity extends Activity {
         String renderer = GpuDetector.renderer();
         content.addView(Ui.text(this, "Detected GPU: " + (renderer.isEmpty() ? "Unknown (System recommended)" : renderer), 14, Ui.MUTED, false));
         String selected = settings.driver();
-        String label = selected.isEmpty() ? "System driver" : "Bundled Turnip";
+        String label = selected.isEmpty() ? "System driver"
+            : selected.equals(DriverPolicy.BUNDLED_GEN8) ? "Bundled Turnip Gen8 V39 patched" : "Bundled Turnip";
         if (selected.startsWith("download-")) try { label=DriverStore.validate(new File(getFilesDir(),"gpu_drivers/"+selected)); }
             catch(Exception e) { label="Unavailable driver — choose another below"; }
         status=Ui.text(this,"Selected: "+label,14,Ui.GOLD,false); content.addView(status);
@@ -29,9 +30,12 @@ public final class DriverActivity extends Activity {
         content.addView(Ui.text(this,DriverPolicy.recommendation(renderer),14,Ui.MUTED,false));
         content.addView(Ui.text(this,"Recommendations are based on GPU family and available testing, not a benchmark of your device.",12,Ui.MUTED,false));
         String recommended = DriverPolicy.defaultDriver(renderer);
-        choice(recommended.isEmpty() ? "Use System (recommended)" : "Use bundled Turnip (recommended)", recommended);
+        choice(recommended.isEmpty() ? "Use System (recommended)"
+            : recommended.equals(DriverPolicy.BUNDLED_GEN8) ? "Use bundled Turnip Gen8 V39 patched (recommended)"
+            : "Use bundled Turnip (recommended)", recommended);
         content.addView(Ui.title(this,"Manual selection"));
         choice("System driver", ""); choice("Bundled Turnip (Adreno 7xx; tested on Thor)",Settings.BUNDLED_DRIVER);
+        choice("Bundled Turnip Gen8 V39 patched (Adreno 8xx; Odin 3)",DriverPolicy.BUNDLED_GEN8);
         File[] installed=new File(getFilesDir(),"gpu_drivers").listFiles();
         if(installed!=null)for(File dir:installed)if(dir.getName().matches("download-[a-f0-9]{64}")) {
             try { choice(DriverStore.validate(dir),dir.getName()); } catch(Exception ignored) {}

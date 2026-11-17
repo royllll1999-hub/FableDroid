@@ -7,13 +7,17 @@ public class DriverPolicyTest {
     @Test public void hardwareDefaults() {
         assertEquals("turnip27", DriverPolicy.defaultDriver("Adreno (TM) 740"));
         assertEquals("turnip27", DriverPolicy.defaultDriver("Adreno 750"));
-        for (String gpu : new String[] { "Adreno (TM) 830", "Adreno 840", "Adreno 640", "Mali-G715", "", "Adreno 7400" })
+        // Odin 3 fork: Adreno 8xx defaults to the bundled Turnip Gen8 V39 patched build.
+        assertEquals("turnipgen8", DriverPolicy.defaultDriver("Adreno (TM) 830"));
+        assertEquals("turnipgen8", DriverPolicy.defaultDriver("Adreno 840"));
+        for (String gpu : new String[] { "Adreno 640", "Mali-G715", "", "Adreno 7400", "Adreno 8400" })
             assertEquals(gpu, "", DriverPolicy.defaultDriver(gpu));
         assertEquals("", DriverPolicy.defaultDriver(null));
     }
     @Test public void upgradesAndManualChoices() {
-        assertEquals("", DriverPolicy.select(null, null, "Adreno (TM) 830"));
-        assertEquals("", DriverPolicy.select(null, true, "Adreno (TM) 830"));
+        assertEquals("turnipgen8", DriverPolicy.select(null, null, "Adreno (TM) 830"));
+        assertEquals("turnipgen8", DriverPolicy.select(null, true, "Adreno (TM) 830"));
+        assertEquals("turnipgen8", DriverPolicy.select("turnipgen8", null, "Adreno (TM) 740"));
         assertEquals("turnip27", DriverPolicy.select(null, null, "Adreno (TM) 740"));
         assertEquals("", DriverPolicy.select(null, false, "Adreno (TM) 740"));
         assertEquals("", DriverPolicy.select("", null, "Adreno (TM) 740"));

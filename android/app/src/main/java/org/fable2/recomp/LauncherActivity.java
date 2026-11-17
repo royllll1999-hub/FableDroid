@@ -171,6 +171,21 @@ public final class LauncherActivity extends Activity {
             Ui.toggle(this, settings.lowLatency(), on -> settings.put("low_latency", on))));
         column.addView(graphics);
 
+        // Odin 3 fork: diagnostics for finding why Adreno 8xx devices run slowly.
+        LinearLayout diagnostics = Ui.card(this);
+        diagnostics.addView(Ui.title(this, "Diagnostics (Odin 3 fork)"));
+        diagnostics.addView(Ui.row(this, "Log FPS",
+            "Writes the game's frame rate to the log every 5 seconds. Turn on, play a few minutes, then send the newest log from Android/data/<app>/files/logs.",
+            Ui.toggle(this, settings.logFps(), on -> settings.put("log_fps", on))));
+        diagnostics.addView(Ui.row(this, "GPU diagnostics in the log",
+            "More detail about GPU work in the log (shader and pipeline creation, waits). Costs some speed; for testing only.",
+            Ui.toggle(this, settings.logGpuDiagnostics(), on -> settings.put("log_gpu_diagnostics", on))));
+        diagnostics.addView(Ui.row(this, "Turnip debug mode",
+            "Test switches for Turnip on Adreno 8xx graphics bugs: sysmem (no tile memory), nolrz (no low-res depth), noubwc (no compressed textures). Off for normal play.",
+            Ui.segmented(this, new String[] { "Off", "sysmem", "nolrz", "noubwc", "all" }, settings.turnipDebug(),
+                i -> settings.put("turnip_debug", i))));
+        column.addView(diagnostics, Ui.fill(this, 16));
+
         LinearLayout controls = Ui.card(this);
         controls.addView(Ui.title(this, "Controls"));
         controls.addView(Ui.row(this, "Touch controls",

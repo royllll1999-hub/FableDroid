@@ -7,8 +7,16 @@ final class DriverPolicy {
     private static final Pattern ADRENO_7XX = Pattern.compile(
         "\\badreno\\s*(?:\\(tm\\)\\s*)?7[0-9]{2}\\b", Pattern.CASE_INSENSITIVE);
 
+    // Odin 3 fork: Adreno 8xx (Snapdragon 8 Elite) gets the bundled Turnip Gen8 V39 patched build.
+    // The system driver and plain Gen8 V35-V38 hang at start on the Odin 3 (FableDroid issue #1);
+    // the patched Gen8 build boots.
+    private static final Pattern ADRENO_8XX = Pattern.compile(
+        "\\badreno\\s*(?:\\(tm\\)\\s*)?8[0-9]{2}\\b", Pattern.CASE_INSENSITIVE);
+    static final String BUNDLED_GEN8 = "turnipgen8";
     static String defaultDriver(String renderer) {
-        return renderer != null && ADRENO_7XX.matcher(renderer).find() ? "turnip27" : "";
+        if (renderer != null && ADRENO_7XX.matcher(renderer).find()) return "turnip27";
+        if (renderer != null && ADRENO_8XX.matcher(renderer).find()) return BUNDLED_GEN8;
+        return "";
     }
 
     static String family(String renderer) {
@@ -29,7 +37,7 @@ final class DriverPolicy {
         if (family.equals("Adreno 7xx"))
             return "Bundled Turnip — experimental on this GPU. Downloadable 6xx/7xx Turnip builds are alternatives.";
         if (family.equals("Adreno 8xx"))
-            return "System driver — experimental. Try a matching Gen8 download below if needed; Fable II compatibility is not yet verified.";
+            return "Bundled Turnip Gen8 V39 patched — the Odin 3 fork's default. The system driver and unpatched Gen8 builds hang at start on the Odin 3.";
         if (family.equals("Adreno 6xx"))
             return "System driver — experimental. Matching 6xx/7xx Turnip downloads are available to try.";
         return "System driver — experimental for " + family + ". No verified compatible driver downloads are available in this launcher.";
@@ -45,7 +53,7 @@ final class DriverPolicy {
 
     static String select(String explicit, Boolean legacyBundled, String renderer) {
         if (explicit != null && (explicit.isEmpty() || explicit.equals("turnip27")
-                || explicit.matches("download-[a-f0-9]{64}"))) return explicit;
+                || explicit.equals(BUNDLED_GEN8) || explicit.matches("download-[a-f0-9]{64}"))) return explicit;
         if (Boolean.FALSE.equals(legacyBundled)) return "";
         return defaultDriver(renderer);
     }

@@ -13,12 +13,14 @@ android {
     namespace 'org.fable2.recomp'
     compileSdk 35
     defaultConfig {
-        applicationId 'org.fable2.recomp'
+        // Odin 3 fork: its own application id, so it installs next to the original FableDroid
+        // (game files and saves are separate; copy saves with Back up / Restore).
+        applicationId 'org.fable2.recomp.odin3'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         minSdk 31
         targetSdk 35
-        versionCode 6
-        versionName '0.6.3-beta'
+        versionCode 7
+        versionName '0.6.3-odin3.1'
         ndk { abiFilters 'arm64-v8a' }
     }
     buildFeatures { buildConfig true }
@@ -47,7 +49,7 @@ android {
     }
     packaging { jniLibs { useLegacyPackaging = true } }
     applicationVariants.all { variant ->
-        variant.outputs.all { outputFileName = "Fable2-Android-${variant.versionName}-${variant.buildType.name}.apk" }
+        variant.outputs.all { outputFileName = "FableDroid-${variant.versionName}-${variant.buildType.name}.apk" }
     }
 }
 
