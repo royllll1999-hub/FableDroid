@@ -24,7 +24,9 @@ public class DriverPolicyTest {
         assertEquals("turnip27", DriverPolicy.select("turnip27", null, "Adreno (TM) 830"));
         String downloaded = "download-" + "a".repeat(64);
         assertEquals(downloaded, DriverPolicy.select(downloaded, null, "Adreno (TM) 830"));
-        assertEquals("", DriverPolicy.select("../bad", null, "Adreno (TM) 830"));
+        // An unknown id falls back to the GPU default (Gen8 on Adreno 8xx in this fork).
+        assertEquals("turnipgen8", DriverPolicy.select("../bad", null, "Adreno (TM) 830"));
+        assertEquals("", DriverPolicy.select("../bad", null, "Mali-G715"));
     }
     @Test public void recommendationsCoverOtherFamilies() {
         for (String gpu : new String[] {"Mali-G715", "Immortalis-G720", "PowerVR Rogue", "ANGLE Xclipse 940", "Unknown", ""}) {
